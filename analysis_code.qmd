@@ -32,7 +32,7 @@ tile_5_feb16 <- rast(here::here('data', 'VNP46A1', 'VNP46A1.A2021047.h08v05.001.
 tile_6_feb16 <- rast(here::here('data', 'VNP46A1', 'VNP46A1.A2021047.h08v06.001.2021048091105.tif'))
 
 # give rasters simpler column names
-names(tile_5_feb07) <- 'val_5_07'
+names(tile_5_feb07) <- 'val_5_07' 
 names(tile_6_feb07) <- 'val_6_07'
 names(tile_5_feb16) <- 'val_5_16'
 names(tile_6_feb16) <- 'val_6_16'
