@@ -1,14 +1,18 @@
 ---
-title: "EDS223_HW3"
+title: "2021 Houston Blackout Analysis"
+subtitle: "A geospatial analysis of power outages resulting from the 2021 Texas winter storms and average median income."
 author: "Joshua Paul Cohen"
 date: last-modified
 format:
   html: 
     toc: true
-editor: visual
+editor: source
 execute: 
   eval: true
   warning: false
+theme:
+  - cyborg
+  - custom.scss
 ---
 
 # [**Full Workflow**]{.underline}

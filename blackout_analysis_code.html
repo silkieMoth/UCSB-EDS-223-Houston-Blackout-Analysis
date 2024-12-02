@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Joshua Paul Cohen">
+<meta name="dcterms.date" content="2024-12-02">
+
+<title>2021 Houston Blackout Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="blackout_analysis_code_files/libs/clipboard/clipboard.min.js"></script>
+<script src="blackout_analysis_code_files/libs/quarto-html/quarto.js"></script>
+<script src="blackout_analysis_code_files/libs/quarto-html/popper.min.js"></script>
+<script src="blackout_analysis_code_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="blackout_analysis_code_files/libs/quarto-html/anchor.min.js"></script>
+<link href="blackout_analysis_code_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="blackout_analysis_code_files/libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="blackout_analysis_code_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="blackout_analysis_code_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="blackout_analysis_code_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="dark">
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#full-workflow" id="toc-full-workflow" class="nav-link active" data-scroll-target="#full-workflow"><u><strong>Full Workflow</strong></u></a>
+  <ul class="collapse">
+  <li><a href="#read-in-all-data" id="toc-read-in-all-data" class="nav-link" data-scroll-target="#read-in-all-data">1. Read in All Data:</a></li>
+  <li><a href="#initial-data-preparation" id="toc-initial-data-preparation" class="nav-link" data-scroll-target="#initial-data-preparation">2. Initial Data Preparation</a>
+  <ul class="collapse">
+  <li><a href="#a.-create-a-blackout-mask" id="toc-a.-create-a-blackout-mask" class="nav-link" data-scroll-target="#a.-create-a-blackout-mask">2a. Create a blackout mask:</a></li>
+  <li><a href="#b.-exclude-highways-from-the-cropped-blackout-mask" id="toc-b.-exclude-highways-from-the-cropped-blackout-mask" class="nav-link" data-scroll-target="#b.-exclude-highways-from-the-cropped-blackout-mask">2b. Exclude highways from the cropped blackout mask:</a></li>
+  <li><a href="#c.-identify-homes-likely-impacted-by-blackouts" id="toc-c.-identify-homes-likely-impacted-by-blackouts" class="nav-link" data-scroll-target="#c.-identify-homes-likely-impacted-by-blackouts">2c. Identify homes likely impacted by blackouts:</a></li>
+  <li><a href="#d.-identify-the-census-tracts-likely-impacted-by-blackout" id="toc-d.-identify-the-census-tracts-likely-impacted-by-blackout" class="nav-link" data-scroll-target="#d.-identify-the-census-tracts-likely-impacted-by-blackout">2d. Identify the census tracts likely impacted by blackout:</a></li>
+  </ul></li>
+  <li><a href="#mapmaking-and-analysis" id="toc-mapmaking-and-analysis" class="nav-link" data-scroll-target="#mapmaking-and-analysis">3. Mapmaking and Analysis</a>
+  <ul class="collapse">
+  <li><a href="#a.-comparison-of-night-light-intensities-before-and-after-the-first-two-storms" id="toc-a.-comparison-of-night-light-intensities-before-and-after-the-first-two-storms" class="nav-link" data-scroll-target="#a.-comparison-of-night-light-intensities-before-and-after-the-first-two-storms">3a. Comparison of night light intensities before and after the first two storms:</a></li>
+  <li><a href="#b.-homes-in-houston-that-lost-power" id="toc-b.-homes-in-houston-that-lost-power" class="nav-link" data-scroll-target="#b.-homes-in-houston-that-lost-power">3b. Homes in Houston that lost power:</a></li>
+  <li><a href="#c.-houston-census-tracts-that-lost-power" id="toc-c.-houston-census-tracts-that-lost-power" class="nav-link" data-scroll-target="#c.-houston-census-tracts-that-lost-power">3c. Houston census tracts that lost power:</a></li>
+  <li><a href="#d.-distribution-of-median-household-income-for-affected-vs-unaffected-tracts" id="toc-d.-distribution-of-median-household-income-for-affected-vs-unaffected-tracts" class="nav-link" data-scroll-target="#d.-distribution-of-median-household-income-for-affected-vs-unaffected-tracts">3d. Distribution of median household income for affected vs unaffected tracts</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><u><strong>Conclusion</strong></u></a></li>
+  <li><a href="#data-citations" id="toc-data-citations" class="nav-link" data-scroll-target="#data-citations"><u><strong>Data Citations</strong></u></a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">2021 Houston Blackout Analysis</h1>
+<p class="subtitle lead">A geospatial analysis of power outages resulting from the 2021 Texas winter storms and average median income.</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Joshua Paul Cohen </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">December 2, 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="full-workflow" class="level1">
+<h1><u><strong>Full Workflow</strong></u></h1>
+<section id="read-in-all-data" class="level2">
+<h2 class="anchored" data-anchor-id="read-in-all-data">1. Read in All Data:</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tmap)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stars)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(testthat)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># power outage rasters</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>tile_5_feb07 <span class="ot">&lt;-</span> <span class="fu">rast</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'VNP46A1'</span>, <span class="st">'VNP46A1.A2021038.h08v05.001.2021039064328.tif'</span>))</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>tile_6_feb07 <span class="ot">&lt;-</span> <span class="fu">rast</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'VNP46A1'</span>, <span class="st">'VNP46A1.A2021038.h08v06.001.2021039064329.tif'</span>))</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>tile_5_feb16 <span class="ot">&lt;-</span> <span class="fu">rast</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'VNP46A1'</span>, <span class="st">'VNP46A1.A2021047.h08v05.001.2021048091106.tif'</span>))</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>tile_6_feb16 <span class="ot">&lt;-</span> <span class="fu">rast</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'VNP46A1'</span>, <span class="st">'VNP46A1.A2021047.h08v06.001.2021048091105.tif'</span>))</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># give rasters simpler column names</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(tile_5_feb07) <span class="ot">&lt;-</span> <span class="st">'val_5_07'</span> </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(tile_6_feb07) <span class="ot">&lt;-</span> <span class="st">'val_6_07'</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(tile_5_feb16) <span class="ot">&lt;-</span> <span class="st">'val_5_16'</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(tile_6_feb16) <span class="ot">&lt;-</span> <span class="st">'val_6_16'</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co"># test for equal crs before merge</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">st_crs</span>(tile_5_feb07) <span class="sc">!=</span> <span class="fu">st_crs</span>(tile_6_feb07)) {</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">"CRS of Feb 7 rasters unequal</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> <span class="cf">if</span>(<span class="fu">st_crs</span>(tile_5_feb16) <span class="sc">!=</span> <span class="fu">st_crs</span>(tile_6_feb16)){</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">"CRS of Feb 16 rasters unequal</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"All CRS's match by date</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co"># create multi band rasters by day</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>power_out_feb07 <span class="ot">&lt;-</span> <span class="fu">merge</span>(tile_5_feb07, tile_6_feb07)</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>power_out_feb16 <span class="ot">&lt;-</span> <span class="fu">merge</span>(tile_5_feb16, tile_6_feb16)</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="co"># test for same crs for merged rasters</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">st_crs</span>(power_out_feb07) <span class="sc">!=</span> <span class="fu">st_crs</span>(power_out_feb16)) {</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">"CRS of merged rasters unequal</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"CRS's of merged rasters match</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co"># test that merges occurred correctly</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="fu">expect_true</span>(<span class="fu">nrow</span>(power_out_feb07) <span class="sc">==</span> (<span class="fu">nrow</span>(tile_5_feb07) <span class="sc">+</span> <span class="fu">nrow</span>(tile_6_feb07)))</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="fu">expect_true</span>(<span class="fu">nrow</span>(power_out_feb16) <span class="sc">==</span> (<span class="fu">nrow</span>(tile_5_feb16) <span class="sc">+</span> <span class="fu">nrow</span>(tile_6_feb16)))</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co"># test that merged rasters have common extent</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">ext</span>(power_out_feb07) <span class="sc">!=</span> <span class="fu">ext</span>(power_out_feb16)) {</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">'Feb 7 raster and Feb 16 raster have different extents</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Extents of merged rasters match</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="co"># highways that intersect with Houston Metropolitan area</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>roads <span class="ot">&lt;-</span> <span class="fu">st_read</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'gis_osm_roads_free_1.gpkg'</span>), <span class="at">query =</span> <span class="st">"SELECT * FROM gis_osm_roads_free_1 WHERE fclass='motorway'"</span>)</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="co"># houses in Houston Metropolitan area</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>houses <span class="ot">&lt;-</span> <span class="fu">st_read</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'gis_osm_buildings_a_free_1.gpkg'</span>), <span class="at">query =</span> <span class="st">"SELECT * FROM gis_osm_buildings_a_free_1 WHERE (type IS NULL AND name IS NULL) OR type IN ('residential', 'apartments', 'house', 'static_caravan', 'detached')"</span>)</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="co"># texas boundaries</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>texas_boundaries <span class="ot">&lt;-</span> <span class="fu">st_read</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'ACS_2019_5YR_TRACT_48_TEXAS.gdb'</span>), <span class="at">layer =</span> <span class="st">'ACS_2019_5YR_TRACT_48_TEXAS'</span>)</span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>texas_income <span class="ot">&lt;-</span> <span class="fu">st_read</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">'data'</span>, <span class="st">'ACS_2019_5YR_TRACT_48_TEXAS.gdb'</span>), <span class="at">layer =</span> <span class="st">'X19_INCOME'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="initial-data-preparation" class="level2">
+<h2 class="anchored" data-anchor-id="initial-data-preparation">2. Initial Data Preparation</h2>
+<section id="a.-create-a-blackout-mask" class="level3">
+<h3 class="anchored" data-anchor-id="a.-create-a-blackout-mask">2a. Create a blackout mask:</h3>
+<p>Create vector representing all areas affected by blackout.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get difference between after and before blackout </span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>diff <span class="ot">&lt;-</span> power_out_feb16 <span class="sc">-</span> power_out_feb07</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># make all non-blackout cells NA</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>diff[diff <span class="sc">&gt;</span> <span class="sc">-</span><span class="dv">200</span>] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># test all values above -200 in difference raster were made NA </span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">expect_in</span>(diff[diff <span class="sc">&gt;</span> <span class="sc">-</span><span class="dv">200</span>], <span class="cn">NA</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># create df containing coordinates for bbox</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>coords <span class="ot">&lt;-</span> <span class="fu">data_frame</span>(<span class="at">long =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">96.5</span>, <span class="sc">-</span><span class="fl">96.5</span>, <span class="sc">-</span><span class="fl">94.5</span>, <span class="sc">-</span><span class="fl">94.5</span>), <span class="at">lat =</span> <span class="fu">c</span>(<span class="dv">29</span>, <span class="fl">30.5</span>, <span class="fl">30.5</span>, <span class="dv">29</span>))</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># make bbox object</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>bbox <span class="ot">&lt;-</span> coords <span class="sc">%&gt;%</span> </span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"long"</span>, <span class="st">"lat"</span>), </span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>           <span class="at">crs =</span> <span class="st">'EPSG:4326'</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_bbox</span>()</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co"># crop to specified extent and convert to sf vector</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>blackout_vector_crop <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">crop</span>(diff, bbox) <span class="sc">%&gt;%</span> <span class="fu">as.polygons</span>() <span class="sc">%&gt;%</span> <span class="fu">st_as_sf</span>()</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co"># converting to vector shifts x max slightly to right, but is otherwise correct</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">ext</span>(blackout_vector_crop) <span class="sc">!=</span> <span class="fu">ext</span>(<span class="sc">-</span><span class="fl">96.5</span>, <span class="sc">-</span><span class="fl">94.7375</span>, <span class="dv">29</span>, <span class="fl">30.5</span>)){</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">'Extent not covering Houston</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'Extent is covering Houston</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co"># change crs of blackout mask to "Texas Centric Albers Equal Area"</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>blackout_vector_crop <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(blackout_vector_crop, <span class="st">'EPSG:3083'</span>)</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co"># make EPSG:3083 test object</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>crs_test_obj <span class="ot">&lt;-</span> <span class="fu">rast</span>()</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="fu">crs</span>(crs_test_obj) <span class="ot">&lt;-</span> <span class="st">'EPSG:3083'</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="co"># test for crs change</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">st_crs</span>(blackout_vector_crop) <span class="sc">!=</span> <span class="fu">st_crs</span>(crs_test_obj)){</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">'CRS of cropped backout mask not converted</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'CRS of cropped blackout mask changed to EPSG:3083</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Extent is covering Houston
+CRS of cropped blackout mask changed to EPSG:3083</code></pre>
+</div>
+</div>
+</section>
+<section id="b.-exclude-highways-from-the-cropped-blackout-mask" class="level3">
+<h3 class="anchored" data-anchor-id="b.-exclude-highways-from-the-cropped-blackout-mask">2b. Exclude highways from the cropped blackout mask:</h3>
+<p>All areas 200 meters within distance from a highway are to be excluded.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># crop roads to same extent as blackout mask</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>roads_crop <span class="ot">&lt;-</span> <span class="fu">st_crop</span>(roads, bbox)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># vector objects do not convert extent perfectly, but are approximately correct</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">round</span>(<span class="fu">ext</span>(roads_crop), <span class="dv">1</span>) <span class="sc">!=</span> <span class="fu">ext</span>(bbox)){</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">'Extent of roads vector not over Houston</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'Extent of roads vector over Houston</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># union roads into single object and convert CRS to NAD83 Texas Centric</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>roads_union <span class="ot">&lt;-</span> roads_crop <span class="sc">%&gt;%</span> </span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_geometry</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="st">'EPSG:3083'</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co"># test for crs conversion of unionized roads vector</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">st_crs</span>(roads_union) <span class="sc">!=</span> <span class="fu">st_crs</span>(crs_test_obj)){</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">'CRS of unionized roads vector not converted</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'CRS of unionized roads vector changed to EPSG:3083</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co"># test that units of crs is meters before creating buffer</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="fu">expect_equal</span>(<span class="fu">st_crs</span>(roads_union)<span class="sc">$</span>units, <span class="st">'m'</span>)</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co"># get area 200m from highways</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>road_buffer_200 <span class="ot">&lt;-</span> roads_union <span class="sc">%&gt;%</span> </span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_buffer</span>(<span class="at">dist =</span> <span class="dv">200</span>) <span class="sc">%&gt;%</span> <span class="fu">st_union</span>()</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="co"># filter blackout areas outside of 200m buffer</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>blackout_filtered <span class="ot">&lt;-</span> blackout_vector_crop <span class="sc">%&gt;%</span> </span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_filter</span>(road_buffer_200, <span class="at">.predicate =</span> st_disjoint)</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="co"># get all blackout areas inside buffer for test</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>blackout_test_obj <span class="ot">&lt;-</span> blackout_vector_crop <span class="sc">%&gt;%</span> </span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_filter</span>(road_buffer_200, <span class="at">.predicate =</span> st_intersects)</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="co"># test that blackout areas near highways were filtered out</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(blackout_vector_crop) <span class="sc">-</span> <span class="fu">nrow</span>(blackout_test_obj) <span class="sc">!=</span> <span class="fu">nrow</span>(blackout_filtered)){</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">'Filter did not execute correctly. Either some blackout areas near highways left in, or some blackout areas away from highways pulled out</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'Blackout areas near highways filtered out correctly</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Extent of roads vector over Houston
+CRS of unionized roads vector changed to EPSG:3083
+Blackout areas near highways filtered out correctly</code></pre>
+</div>
+</div>
+</section>
+<section id="c.-identify-homes-likely-impacted-by-blackouts" class="level3">
+<h3 class="anchored" data-anchor-id="c.-identify-homes-likely-impacted-by-blackouts">2c. Identify homes likely impacted by blackouts:</h3>
+<p>Cross reference homes with blackout mask to find overlap.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># union blackout into single polygon</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>blackout_filtered_union <span class="ot">&lt;-</span> blackout_filtered <span class="sc">%&gt;%</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_union</span>()</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># change crs of houses to NAD83 Texas Centric</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>houses <span class="ot">&lt;-</span> houses <span class="sc">%&gt;%</span> <span class="fu">st_transform</span>(<span class="fu">st_crs</span>(blackout_filtered_union))</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># test for crs conversion </span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">st_crs</span>(houses) <span class="sc">!=</span> <span class="fu">st_crs</span>(crs_test_obj)){</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">'CRS of house layer not converted</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'CRS of house layer changed to EPSG:3083</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># filter for affected houses</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>houses_affected <span class="ot">&lt;-</span> houses <span class="sc">%&gt;%</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_filter</span>(blackout_filtered_union, <span class="at">.predicate =</span> st_intersects)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co"># get all houses unaffected for test</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>houses_test_obj <span class="ot">&lt;-</span> houses <span class="sc">%&gt;%</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_filter</span>(blackout_filtered_union, <span class="at">.predicate =</span> st_disjoint)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co"># test that all affected homes were filtered for</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(houses) <span class="sc">-</span> <span class="fu">nrow</span>(houses_test_obj) <span class="sc">!=</span> <span class="fu">nrow</span>(houses_affected)) {</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">'Filter did not execute correctly. Either some affected houses were left out, or some unaffected houses were included</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'Affected houses filtered for correctly</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>CRS of house layer changed to EPSG:3083
+Affected houses filtered for correctly</code></pre>
+</div>
+</div>
+</section>
+<section id="d.-identify-the-census-tracts-likely-impacted-by-blackout" class="level3">
+<h3 class="anchored" data-anchor-id="d.-identify-the-census-tracts-likely-impacted-by-blackout">2d. Identify the census tracts likely impacted by blackout:</h3>
+<p>Cross reference census tracts with blackout mask to find overlap.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># truncate GEOID in income for joining</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>texas_income <span class="ot">&lt;-</span> texas_income <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">GEOID =</span> <span class="fu">substr</span>(GEOID, <span class="dv">8</span>, <span class="fu">length</span>(GEOID)))</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># test for full equality of texas data joinby field</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">expect_setequal</span>(texas_boundaries<span class="sc">$</span>GEOID, texas_income<span class="sc">$</span>GEOID)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># join texas polygons and median income data</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>texas_ej <span class="ot">&lt;-</span> <span class="fu">left_join</span>(texas_boundaries, texas_income) <span class="sc">%&gt;%</span> </span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(GEOID, B19013e1) <span class="sc">%&gt;%</span> </span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">income =</span> B19013e1)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># test that join operated correctly</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(texas_ej) <span class="sc">!=</span> <span class="fu">nrow</span>(texas_income)){</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">'Unexpected number of rows. Join likely did not operate correctly</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'Join between Texas income data and boundaries sucessful</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co"># set crs to NAD83 Texas Centric</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>texas_ej <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(texas_ej, <span class="at">crs =</span> <span class="fu">st_crs</span>(houses))</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co"># test for crs conversion </span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">st_crs</span>(texas_ej) <span class="sc">!=</span> <span class="fu">st_crs</span>(crs_test_obj)){</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">'CRS of Texas boundary and income layer not converted</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'CRS of Texas boundary and income layer changed to EPSG:3083</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co"># get all tracts containing affected houses</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>tracts_affected <span class="ot">&lt;-</span> texas_ej <span class="sc">%&gt;%</span> </span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_filter</span>(houses_affected, <span class="at">.predicate =</span> st_intersects)</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co"># add logical column to texas boundary/income marking affected or unaffected</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>texas_ej <span class="ot">&lt;-</span> texas_ej <span class="sc">%&gt;%</span> </span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">is_affected =</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(texas_ej, houses_affected)) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="co"># test that both these steps worked correctly</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(tracts_affected) <span class="sc">+</span> <span class="fu">nrow</span>(<span class="fu">subset</span>(texas_ej, is_affected <span class="sc">==</span> <span class="cn">FALSE</span>)) <span class="sc">!=</span> <span class="fu">nrow</span>(texas_ej)){</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">'Error in filtering. Either st_filter grabbed the wrong number of tracts or st_intersects included erroneous tracts</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">'Tracts filtered and is_affected column in Texas boundary and income layer created correctly</span><span class="sc">\n</span><span class="st">'</span>)</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Join between Texas income data and boundaries sucessful
+CRS of Texas boundary and income layer changed to EPSG:3083
+Tracts filtered and is_affected column in Texas boundary and income layer created correctly</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="mapmaking-and-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="mapmaking-and-analysis">3. Mapmaking and Analysis</h2>
+<section id="a.-comparison-of-night-light-intensities-before-and-after-the-first-two-storms" class="level3">
+<h3 class="anchored" data-anchor-id="a.-comparison-of-night-light-intensities-before-and-after-the-first-two-storms">3a. Comparison of night light intensities before and after the first two storms:</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># crop spatrasters to houston</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>power_on_crop <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">crop</span>(power_out_feb07, bbox)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>power_off_crop <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">crop</span>(power_out_feb16, bbox)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># concatenate cropped rasters</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>c_crop <span class="ot">&lt;-</span> <span class="fu">c</span>(power_on_crop, power_off_crop)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co"># edit labels of concat raster</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(c_crop) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">'Power On (Feb 07)'</span>, <span class="st">'Power Off (Feb 16)'</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(c_crop) <span class="sc">+</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_raster</span>(<span class="at">palette =</span> <span class="st">'viridis'</span>,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">n =</span> <span class="dv">20</span>,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>            <span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">'Light Intensity (nW cm'</span>, common<span class="sc">::</span><span class="fu">supsc</span>(<span class="st">'-2'</span>), <span class="st">'sr'</span>, common<span class="sc">::</span><span class="fu">supsc</span>(<span class="st">'-1'</span>), <span class="st">')'</span>),</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.is.portrait =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>            <span class="at">style =</span> <span class="st">'cont'</span>, <span class="co"># make legend continuous</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>            <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">700</span>,<span class="dv">30</span>), <span class="co"># make cells &gt; 700 equal 700</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.format =</span> <span class="fu">list</span>(<span class="at">fun =</span> <span class="cf">function</span>(x) { <span class="co"># make legend labels low and high</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>                <span class="fu">ifelse</span>(x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fu">max</span>(x)), <span class="fu">ifelse</span>(x <span class="sc">==</span> <span class="dv">0</span>, <span class="st">'Low'</span>, <span class="st">'High'</span>), <span class="st">""</span>)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>                }, <span class="at">text.separator =</span> <span class="st">''</span>)) <span class="sc">+</span> </span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">main.title =</span> <span class="st">'Houston Nightime Light Intensities </span><span class="sc">\n</span><span class="st">Before &amp; After February 2021 Storms'</span>,</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title.size =</span> <span class="fl">1.20</span>,</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title.position =</span> <span class="st">'center'</span>,</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>            <span class="at">inner.margins =</span> <span class="dv">0</span>,</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>            <span class="at">outer.margins =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="fl">0.02</span>, <span class="dv">0</span>),</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.outside.position =</span> <span class="st">'bottom'</span>) <span class="sc">+</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_compass</span>(<span class="at">type =</span> <span class="st">"4star"</span>, </span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>             <span class="at">size =</span> <span class="dv">2</span>, </span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>             <span class="at">position =</span> <span class="fu">c</span>(<span class="fl">0.01</span>, <span class="fl">0.12</span>), </span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>             <span class="at">text.color =</span> <span class="st">'white'</span>, <span class="co"># invert colors</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>             <span class="at">color.dark =</span> <span class="st">'white'</span>, </span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>             <span class="at">color.light =</span> <span class="st">'black'</span>) <span class="sc">+</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_scale_bar</span>(<span class="at">width =</span> <span class="fl">0.2</span>, </span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>               <span class="at">position =</span> <span class="fu">c</span>(<span class="fl">0.02</span>, <span class="dv">0</span>), </span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>               <span class="at">text.size =</span> <span class="dv">2</span>, </span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>               <span class="at">text.color =</span> <span class="st">'white'</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="blackout_analysis_code_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="b.-homes-in-houston-that-lost-power" class="level3">
+<h3 class="anchored" data-anchor-id="b.-homes-in-houston-that-lost-power">3b. Homes in Houston that lost power:</h3>
+<section id="map" class="level5">
+<h5 class="anchored" data-anchor-id="map">Map</h5>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(texas_boundaries, <span class="at">bbox =</span> houses_affected) <span class="sc">+</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(houses_affected) <span class="sc">+</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="at">col =</span> <span class="st">'red'</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">border.col =</span> <span class="st">'red'</span>) <span class="sc">+</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_add_legend</span>(<span class="at">col =</span> <span class="fu">c</span>(<span class="st">'red'</span>), </span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                <span class="at">type =</span> <span class="st">'fill'</span>, </span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">'Affected Houses'</span>)) <span class="sc">+</span> </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">main.title =</span> <span class="st">'Houston Houses Affected by Blackout'</span>, </span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title.size =</span> <span class="fl">1.3</span>,</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title.position =</span> <span class="fu">c</span>(<span class="st">'center'</span>, <span class="st">'TOP'</span>),</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">'left'</span>, <span class="st">'top'</span>),</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.frame =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.frame.lwd =</span> <span class="dv">2</span>) <span class="sc">+</span> </span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_compass</span>(<span class="at">type =</span> <span class="st">"4star"</span>, </span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>             <span class="at">size =</span> <span class="dv">3</span>, </span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>             <span class="at">position =</span> <span class="fu">c</span>(<span class="st">'LEFT'</span>,<span class="st">'BOTTOM'</span>), </span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>             <span class="at">bg.color =</span> <span class="st">"grey"</span>, </span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>             <span class="at">bg.alpha =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_scale_bar</span>(<span class="at">bg.color =</span> <span class="st">"grey"</span>, </span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>               <span class="at">bg.alpha =</span> <span class="fl">0.25</span>, </span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>               <span class="at">width =</span> <span class="fl">0.4</span>, </span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>               <span class="at">position =</span> <span class="fu">c</span>(<span class="st">'LEFT'</span>,<span class="st">'BOTTOM'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="blackout_analysis_code_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="estimate" class="level5">
+<h5 class="anchored" data-anchor-id="estimate">Estimate</h5>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get count of all houses, might delete this</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>estimate_affected <span class="ot">&lt;-</span> <span class="fu">nrow</span>(houses_affected)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">'Estimate for number of houses affected by blackouts:'</span>, estimate_affected, <span class="st">'</span><span class="sc">\n</span><span class="st">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Estimate for number of houses affected by blackouts: 27841 </code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="c.-houston-census-tracts-that-lost-power" class="level3">
+<h3 class="anchored" data-anchor-id="c.-houston-census-tracts-that-lost-power">3c. Houston census tracts that lost power:</h3>
+<section id="map-1" class="level5">
+<h5 class="anchored" data-anchor-id="map-1">Map</h5>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(texas_boundaries, <span class="at">bbox =</span> bbox) <span class="sc">+</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>() <span class="sc">+</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(texas_ej) <span class="sc">+</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="at">col =</span> <span class="st">'is_affected'</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">palette =</span> <span class="fu">c</span>(<span class="st">'white'</span>, <span class="st">'red'</span>),</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">title =</span> <span class="st">''</span>, <span class="co"># remove legend title</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">'Unaffected'</span>, <span class="st">'Affected'</span>)) <span class="sc">+</span> </span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">main.title =</span> <span class="st">'Houston Census Tracts Affected by Blackout'</span>, </span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title.position =</span> <span class="fu">c</span>(<span class="st">'center'</span>, <span class="st">'TOP'</span>),</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">'left'</span>,<span class="st">'top'</span>),</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title.size =</span> <span class="fl">1.3</span>,</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.frame =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">legend.frame.lwd =</span> <span class="dv">2</span>) <span class="sc">+</span> </span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_compass</span>(<span class="at">type =</span> <span class="st">"4star"</span>, </span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>             <span class="at">size =</span> <span class="dv">3</span>, </span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>             <span class="at">position =</span> <span class="fu">c</span>(<span class="st">'LEFT'</span>, <span class="st">'BOTTOM'</span>), </span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>             <span class="at">bg.color =</span> <span class="st">"grey"</span>, </span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>             <span class="at">bg.alpha =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_scale_bar</span>(<span class="at">bg.color =</span> <span class="st">"grey"</span>, </span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>               <span class="at">bg.alpha =</span> <span class="fl">0.25</span>, </span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>               <span class="at">width =</span> <span class="fl">0.4</span>, </span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>               <span class="at">position =</span> <span class="fu">c</span>(<span class="st">'LEFT'</span>, <span class="st">'BOTTOM'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="blackout_analysis_code_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="estimate-1" class="level5">
+<h5 class="anchored" data-anchor-id="estimate-1">Estimate</h5>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">'Estimate for number of tracts affected by blackouts:'</span>, <span class="fu">nrow</span>(tracts_affected), <span class="st">'out of'</span>, <span class="fu">nrow</span>(texas_ej))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Estimate for number of tracts affected by blackouts: 345 out of 5265</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="d.-distribution-of-median-household-income-for-affected-vs-unaffected-tracts" class="level3">
+<h3 class="anchored" data-anchor-id="d.-distribution-of-median-household-income-for-affected-vs-unaffected-tracts">3d. Distribution of median household income for affected vs unaffected tracts</h3>
+<section id="graph" class="level5">
+<h5 class="anchored" data-anchor-id="graph">Graph</h5>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(texas_ej, </span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> income, </span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> <span class="fu">after_stat</span>(count <span class="sc">/</span> <span class="fu">sum</span>(count)), <span class="co"># y is normalized by n</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>           <span class="at">fill =</span> is_affected)) <span class="sc">+</span> </span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">data =</span> <span class="fu">subset</span>(texas_ej, is_affected <span class="sc">==</span> <span class="cn">FALSE</span>), </span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">aes</span>(<span class="at">fill =</span> is_affected), </span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">alpha =</span> <span class="fl">0.5</span>, </span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">bins =</span> <span class="dv">30</span>) <span class="sc">+</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">data =</span> <span class="fu">subset</span>(texas_ej, is_affected <span class="sc">==</span> <span class="cn">TRUE</span>), </span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">aes</span>(<span class="at">fill =</span> is_affected), </span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">alpha =</span> <span class="fl">0.5</span>, </span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">bins =</span> <span class="dv">30</span>) <span class="sc">+</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">'Median Household Income (USD)'</span>, </span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">'Frequency (% of Data)'</span>,</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">'Median Household Income of Affected </span><span class="sc">\n</span><span class="st">Tracts vs Unaffected Tracts in Houston, TX'</span>) <span class="sc">+</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">'inside'</span>,</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.position.inside =</span> <span class="fu">c</span>(<span class="fl">0.87</span>, <span class="fl">0.8</span>),</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)) <span class="sc">+</span> <span class="co"># centralize title</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">'grey20'</span>, <span class="st">'red'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="blackout_analysis_code_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="mean-and-median" class="level5">
+<h5 class="anchored" data-anchor-id="mean-and-median">Mean and Median</h5>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for affected tracts</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>inc_compare_aff <span class="ot">&lt;-</span> <span class="fu">subset</span>(texas_ej, is_affected <span class="sc">==</span> <span class="cn">TRUE</span>, <span class="at">select =</span> income) <span class="sc">%&gt;%</span> <span class="fu">st_drop_geometry</span>()</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># subset for unaffected tracts</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>inc_compare_unaff <span class="ot">&lt;-</span> <span class="fu">subset</span>(texas_ej, is_affected <span class="sc">==</span> <span class="cn">FALSE</span>, <span class="at">select =</span> income) <span class="sc">%&gt;%</span> <span class="fu">st_drop_geometry</span>()</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">'Comparing medians of the median household income:</span><span class="sc">\n</span><span class="st">'</span>, </span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Affected:'</span>, <span class="fu">median</span>(inc_compare_aff<span class="sc">$</span>income, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="st">'</span><span class="sc">\n</span><span class="st">'</span>, </span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Unaffected:'</span>, <span class="fu">median</span>(inc_compare_unaff<span class="sc">$</span>income, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="st">'</span><span class="sc">\n\n</span><span class="st">'</span>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">'Comparing means of the median household income:</span><span class="sc">\n</span><span class="st">'</span>, </span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Affected:'</span>, <span class="fu">round</span>(<span class="fu">mean</span>(inc_compare_aff<span class="sc">$</span>income, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)), <span class="st">'</span><span class="sc">\n</span><span class="st">'</span>, </span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Unaffected:'</span>, <span class="fu">round</span>(<span class="fu">mean</span>(inc_compare_unaff<span class="sc">$</span>income, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Comparing medians of the median household income:
+ Affected: 59490 
+ Unaffected: 55476 
+
+Comparing means of the median household income:
+ Affected: 71634 
+ Unaffected: 63601</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+</section>
+<section id="conclusion" class="level1">
+<h1><u><strong>Conclusion</strong></u></h1>
+<p>It appears that the effects of the Texas February 2021 blackouts were not disproportionately felt. In fact, the median household income of the affected homes appears slightly higher than that of the unaffected homes. Some limitations of this analysis include, uncertainty caused by: a lack of spatial imagery data in between 2/7 and 2/16, possible error introduced through use of spatial analysis functions, use of raster data itself as it is nonspecific and doesn’t show why the cells have the values they do, and whether or not a difference of 200 is enough to encompass all homes affected by blackouts.</p>
+</section>
+<section id="data-citations" class="level1">
+<h1><u><strong>Data Citations</strong></u></h1>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Data</th>
+<th>Citation</th>
+<th>Link</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NASA Worldview VNP46A1 - VIIRS/NPP Daily Gridded Day Night Band 500m Linear Lat Lon Grid Night</td>
+<td>Román, M.O., Wang, Z., Sun, Q., Kalb, V., Miller, S.D., Molthan, A., Schultz, L., Bell, J., Stokes, E.C., Pandey, B. and Seto, K.C., et al.&nbsp;(2018). NASA’s Black Marble nighttime lights product suite. Remote Sensing of Environment 210, 113-143. doi:10.1016/j.rse.2018.03.017.</td>
+<td><a href="https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/VNP46A1">Link</a></td>
+</tr>
+<tr class="even">
+<td>OpenStreetMap from Geofabrik</td>
+<td>OpenStreetMap contributors. (2017). Planet dump retrieved from https://planet.osm.org.</td>
+<td><a href="https://download.geofabrik.de/">Link</a></td>
+</tr>
+<tr class="odd">
+<td>U.S. Census Bureau American Community Survey 2019</td>
+<td>U.S. Census Bureau. (2019). American Community Survey 5-Year Data (2009-2022).</td>
+<td><a href="https://www.census.gov/data/developers/data-sets/acs-5year.2019.html#list-tab-1806015614">Link</a></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
