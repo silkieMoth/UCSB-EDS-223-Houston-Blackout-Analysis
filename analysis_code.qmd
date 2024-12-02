@@ -1,0 +1,458 @@
+---
+title: "EDS223_HW3"
+author: "Joshua Paul Cohen"
+date: last-modified
+format:
+  html: 
+    toc: true
+editor: visual
+execute: 
+  eval: true
+  warning: false
+---
+
+# [**Full Workflow**]{.underline}
+
+## 1. Read in All Data:
+
+```{r, results='hide'}
+#| code-fold: true
+
+library(tidyverse)
+library(sf)
+library(terra)
+library(tmap)
+library(stars)
+library(testthat)
+
+# power outage rasters
+tile_5_feb07 <- rast(here::here('data', 'VNP46A1', 'VNP46A1.A2021038.h08v05.001.2021039064328.tif'))
+tile_6_feb07 <- rast(here::here('data', 'VNP46A1', 'VNP46A1.A2021038.h08v06.001.2021039064329.tif'))
+tile_5_feb16 <- rast(here::here('data', 'VNP46A1', 'VNP46A1.A2021047.h08v05.001.2021048091106.tif'))
+tile_6_feb16 <- rast(here::here('data', 'VNP46A1', 'VNP46A1.A2021047.h08v06.001.2021048091105.tif'))
+
+# give rasters simpler column names
+names(tile_5_feb07) <- 'val_5_07'
+names(tile_6_feb07) <- 'val_6_07'
+names(tile_5_feb16) <- 'val_5_16'
+names(tile_6_feb16) <- 'val_6_16'
+
+# test for equal crs before merge
+if(st_crs(tile_5_feb07) != st_crs(tile_6_feb07)) {
+  warning("CRS of Feb 7 rasters unequal\n")
+} else if(st_crs(tile_5_feb16) != st_crs(tile_6_feb16)){
+  warning("CRS of Feb 16 rasters unequal\n")
+} else {
+  cat("All CRS's match by date\n")
+}
+
+# create multi band rasters by day
+power_out_feb07 <- merge(tile_5_feb07, tile_6_feb07)
+power_out_feb16 <- merge(tile_5_feb16, tile_6_feb16)
+
+# test for same crs for merged rasters
+if(st_crs(power_out_feb07) != st_crs(power_out_feb16)) {
+  warning("CRS of merged rasters unequal\n")
+} else {
+  cat("CRS's of merged rasters match\n")
+}
+
+# test that merges occurred correctly
+expect_true(nrow(power_out_feb07) == (nrow(tile_5_feb07) + nrow(tile_6_feb07)))
+expect_true(nrow(power_out_feb16) == (nrow(tile_5_feb16) + nrow(tile_6_feb16)))
+
+# test that merged rasters have common extent
+if(ext(power_out_feb07) != ext(power_out_feb16)) {
+  warning('Feb 7 raster and Feb 16 raster have different extents\n')
+} else {
+  cat("Extents of merged rasters match\n")
+}
+
+# highways that intersect with Houston Metropolitan area
+roads <- st_read(here::here('data', 'gis_osm_roads_free_1.gpkg'), query = "SELECT * FROM gis_osm_roads_free_1 WHERE fclass='motorway'")
+
+# houses in Houston Metropolitan area
+houses <- st_read(here::here('data', 'gis_osm_buildings_a_free_1.gpkg'), query = "SELECT * FROM gis_osm_buildings_a_free_1 WHERE (type IS NULL AND name IS NULL) OR type IN ('residential', 'apartments', 'house', 'static_caravan', 'detached')")
+
+# texas boundaries
+texas_boundaries <- st_read(here::here('data', 'ACS_2019_5YR_TRACT_48_TEXAS.gdb'), layer = 'ACS_2019_5YR_TRACT_48_TEXAS')
+texas_income <- st_read(here::here('data', 'ACS_2019_5YR_TRACT_48_TEXAS.gdb'), layer = 'X19_INCOME')
+
+```
+
+## 2. Initial Data Preparation
+
+### 2a. Create a blackout mask:
+
+Create vector representing all areas affected by blackout.
+
+```{r, results='hold'}
+
+# get difference between after and before blackout 
+diff <- power_out_feb16 - power_out_feb07
+
+# make all non-blackout cells NA
+diff[diff > -200] <- NA
+
+# test all values above -200 in difference raster were made NA 
+expect_in(diff[diff > -200], NA)
+
+# create df containing coordinates for bbox
+coords <- data_frame(long = c(-96.5, -96.5, -94.5, -94.5), lat = c(29, 30.5, 30.5, 29))
+
+# make bbox object
+bbox <- coords %>% 
+  st_as_sf(coords = c("long", "lat"), 
+           crs = 'EPSG:4326') %>% 
+  st_bbox()
+
+# crop to specified extent and convert to sf vector
+blackout_vector_crop <- terra::crop(diff, bbox) %>% as.polygons() %>% st_as_sf()
+
+# converting to vector shifts x max slightly to right, but is otherwise correct
+if(ext(blackout_vector_crop) != ext(-96.5, -94.7375, 29, 30.5)){
+  stop('Extent not covering Houston\n')
+} else{
+  cat('Extent is covering Houston\n')
+}
+
+# change crs of blackout mask to "Texas Centric Albers Equal Area"
+blackout_vector_crop <- st_transform(blackout_vector_crop, 'EPSG:3083')
+
+# make EPSG:3083 test object
+crs_test_obj <- rast()
+crs(crs_test_obj) <- 'EPSG:3083'
+
+# test for crs change
+if(st_crs(blackout_vector_crop) != st_crs(crs_test_obj)){
+  stop('CRS of cropped backout mask not converted\n')
+} else{
+  cat('CRS of cropped blackout mask changed to EPSG:3083\n')
+}
+```
+
+### 2b. Exclude highways from the cropped blackout mask:
+
+All areas 200 meters within distance from a highway are to be excluded.
+
+```{r, results='hold'}
+# crop roads to same extent as blackout mask
+roads_crop <- st_crop(roads, bbox)
+
+# vector objects do not convert extent perfectly, but are approximately correct
+if(round(ext(roads_crop), 1) != ext(bbox)){
+  warning('Extent of roads vector not over Houston\n')
+} else{
+  cat('Extent of roads vector over Houston\n')
+}
+
+# union roads into single object and convert CRS to NAD83 Texas Centric
+roads_union <- roads_crop %>% 
+  st_geometry() %>% 
+  st_transform(crs = 'EPSG:3083')
+
+# test for crs conversion of unionized roads vector
+if(st_crs(roads_union) != st_crs(crs_test_obj)){
+  stop('CRS of unionized roads vector not converted\n')
+} else{
+  cat('CRS of unionized roads vector changed to EPSG:3083\n')
+}
+
+# test that units of crs is meters before creating buffer
+expect_equal(st_crs(roads_union)$units, 'm')
+
+# get area 200m from highways
+road_buffer_200 <- roads_union %>% 
+  st_buffer(dist = 200) %>% st_union()
+
+# filter blackout areas outside of 200m buffer
+blackout_filtered <- blackout_vector_crop %>% 
+  st_filter(road_buffer_200, .predicate = st_disjoint)
+
+# get all blackout areas inside buffer for test
+blackout_test_obj <- blackout_vector_crop %>% 
+  st_filter(road_buffer_200, .predicate = st_intersects)
+
+# test that blackout areas near highways were filtered out
+if(nrow(blackout_vector_crop) - nrow(blackout_test_obj) != nrow(blackout_filtered)){
+  warning('Filter did not execute correctly. Either some blackout areas near highways left in, or some blackout areas away from highways pulled out\n')
+} else{
+  cat('Blackout areas near highways filtered out correctly\n')
+}
+```
+
+### 2c. Identify homes likely impacted by blackouts:
+
+Cross reference homes with blackout mask to find overlap.
+
+```{r, results='hold'}
+# union blackout into single polygon
+blackout_filtered_union <- blackout_filtered %>% 
+  st_union()
+
+# change crs of houses to NAD83 Texas Centric
+houses <- houses %>% st_transform(st_crs(blackout_filtered_union))
+
+# test for crs conversion 
+if(st_crs(houses) != st_crs(crs_test_obj)){
+  stop('CRS of house layer not converted\n')
+} else{
+  cat('CRS of house layer changed to EPSG:3083\n')
+}
+
+# filter for affected houses
+houses_affected <- houses %>%
+  st_filter(blackout_filtered_union, .predicate = st_intersects)
+
+# get all houses unaffected for test
+houses_test_obj <- houses %>%
+  st_filter(blackout_filtered_union, .predicate = st_disjoint)
+
+# test that all affected homes were filtered for
+if(nrow(houses) - nrow(houses_test_obj) != nrow(houses_affected)) {
+  warning('Filter did not execute correctly. Either some affected houses were left out, or some unaffected houses were included\n')
+} else{
+  cat('Affected houses filtered for correctly\n')
+}
+```
+
+### 2d. Identify the census tracts likely impacted by blackout:
+
+Cross reference census tracts with blackout mask to find overlap.
+
+```{r, results='hold'}
+
+# truncate GEOID in income for joining
+texas_income <- texas_income %>% mutate(GEOID = substr(GEOID, 8, length(GEOID)))
+
+# test for full equality of texas data joinby field
+expect_setequal(texas_boundaries$GEOID, texas_income$GEOID)
+
+# join texas polygons and median income data
+texas_ej <- left_join(texas_boundaries, texas_income) %>% 
+  select(GEOID, B19013e1) %>% 
+  rename(income = B19013e1)
+
+# test that join operated correctly
+if(nrow(texas_ej) != nrow(texas_income)){
+  warning('Unexpected number of rows. Join likely did not operate correctly\n')
+} else{
+  cat('Join between Texas income data and boundaries sucessful\n')
+}
+
+# set crs to NAD83 Texas Centric
+texas_ej <- st_transform(texas_ej, crs = st_crs(houses))
+
+# test for crs conversion 
+if(st_crs(texas_ej) != st_crs(crs_test_obj)){
+  stop('CRS of Texas boundary and income layer not converted\n')
+} else{
+  cat('CRS of Texas boundary and income layer changed to EPSG:3083\n')
+}
+
+# get all tracts containing affected houses
+tracts_affected <- texas_ej %>% 
+  st_filter(houses_affected, .predicate = st_intersects)
+
+# add logical column to texas boundary/income marking affected or unaffected
+texas_ej <- texas_ej %>% 
+  mutate(is_affected = lengths(st_intersects(texas_ej, houses_affected)) > 0)
+
+# test that both these steps worked correctly
+if(nrow(tracts_affected) + nrow(subset(texas_ej, is_affected == FALSE)) != nrow(texas_ej)){
+  warning('Error in filtering. Either st_filter grabbed the wrong number of tracts or st_intersects included erroneous tracts\n')
+} else{
+  cat('Tracts filtered and is_affected column in Texas boundary and income layer created correctly\n')
+}
+
+```
+
+## 3. Mapmaking and Analysis
+
+### 3a. Comparison of night light intensities before and after the first two storms:
+
+```{r, fig.width=7, fig.height=5}
+#| code-fold: true
+
+# crop spatrasters to houston
+power_on_crop <- terra::crop(power_out_feb07, bbox)
+power_off_crop <- terra::crop(power_out_feb16, bbox)
+
+# concatenate cropped rasters
+c_crop <- c(power_on_crop, power_off_crop)
+
+# edit labels of concat raster
+names(c_crop) <- c('Power On (Feb 07)', 'Power Off (Feb 16)')
+
+tm_shape(c_crop) +
+  tm_raster(palette = 'viridis',
+            n = 20,
+            title = paste0('Light Intensity (nW cm', common::supsc('-2'), 'sr', common::supsc('-1'), ')'),
+            legend.is.portrait = FALSE,
+            style = 'cont', # make legend continuous
+            breaks = seq(0,700,30), # make cells > 700 equal 700
+            legend.format = list(fun = function(x) { # make legend labels low and high
+                ifelse(x %in% c(0, max(x)), ifelse(x == 0, 'Low', 'High'), "")
+                }, text.separator = '')) + 
+  tm_layout(main.title = 'Houston Nightime Light Intensities \nBefore & After February 2021 Storms',
+            main.title.size = 1.20,
+            main.title.position = 'center',
+            inner.margins = 0,
+            outer.margins = c(0, 0, 0.02, 0),
+            legend.outside.position = 'bottom') +
+  tm_compass(type = "4star", 
+             size = 2, 
+             position = c(0.01, 0.12), 
+             text.color = 'white', # invert colors
+             color.dark = 'white', 
+             color.light = 'black') +
+  tm_scale_bar(width = 0.2, 
+               position = c(0.02, 0), 
+               text.size = 2, 
+               text.color = 'white') 
+
+```
+
+### 3b. Homes in Houston that lost power:
+
+##### Map
+
+```{r}
+#| code-fold: true
+
+tm_shape(texas_boundaries, bbox = houses_affected) +
+  tm_borders(alpha = 0.3) +
+tm_shape(houses_affected) +
+  tm_polygons(col = 'red',
+             border.col = 'red') +
+  tm_add_legend(col = c('red'), 
+                type = 'fill', 
+                labels = c('Affected Houses')) + 
+  tm_layout(main.title = 'Houston Houses Affected by Blackout', 
+            main.title.size = 1.3,
+            main.title.position = c('center', 'TOP'),
+            legend.position = c('left', 'top'),
+            legend.frame = TRUE,
+            legend.frame.lwd = 2) + 
+  tm_compass(type = "4star", 
+             size = 3, 
+             position = c('LEFT','BOTTOM'), 
+             bg.color = "grey", 
+             bg.alpha = 0.25) +
+  tm_scale_bar(bg.color = "grey", 
+               bg.alpha = 0.25, 
+               width = 0.4, 
+               position = c('LEFT','BOTTOM'))
+```
+
+##### Estimate
+
+```{r}
+#| code-fold: true
+
+# Get count of all houses, might delete this
+estimate_affected <- nrow(houses_affected)
+
+cat('Estimate for number of houses affected by blackouts:', estimate_affected, '\n')
+```
+
+### 3c. Houston census tracts that lost power:
+
+##### Map
+
+```{r}
+#| code-fold: true
+
+tm_shape(texas_boundaries, bbox = bbox) +
+  tm_borders() +
+tm_shape(texas_ej) +
+  tm_polygons(col = 'is_affected',
+              palette = c('white', 'red'),
+              title = '', # remove legend title
+              labels = c('Unaffected', 'Affected')) + 
+  tm_layout(main.title = 'Houston Census Tracts Affected by Blackout', 
+            main.title.position = c('center', 'TOP'),
+            legend.position = c('left','top'),
+            main.title.size = 1.3,
+            legend.frame = TRUE,
+            legend.frame.lwd = 2) + 
+  tm_compass(type = "4star", 
+             size = 3, 
+             position = c('LEFT', 'BOTTOM'), 
+             bg.color = "grey", 
+             bg.alpha = 0.25) +
+  tm_scale_bar(bg.color = "grey", 
+               bg.alpha = 0.25, 
+               width = 0.4, 
+               position = c('LEFT', 'BOTTOM'))
+```
+
+##### Estimate
+
+```{r}
+#| code-fold: true
+
+cat('Estimate for number of tracts affected by blackouts:', nrow(tracts_affected), 'out of', nrow(texas_ej))
+```
+
+### 3d. Distribution of median household income for affected vs unaffected tracts
+
+##### Graph
+
+```{r}
+#| code-fold: true
+
+ggplot(texas_ej, 
+       aes(x = income, 
+           y = after_stat(count / sum(count)), # y is normalized by n
+           fill = is_affected)) + 
+  geom_histogram(data = subset(texas_ej, is_affected == FALSE), 
+                 aes(fill = is_affected), 
+                 alpha = 0.5, 
+                 bins = 30) +
+  geom_histogram(data = subset(texas_ej, is_affected == TRUE), 
+                 aes(fill = is_affected), 
+                 alpha = 0.5, 
+                 bins = 30) +
+  labs(x = 'Median Household Income (USD)', 
+       y = 'Frequency (% of Data)',
+       title = 'Median Household Income of Affected \nTracts vs Unaffected Tracts in Houston, TX') +
+  theme(legend.position = 'inside',
+        legend.position.inside = c(0.87, 0.8),
+        legend.title = element_blank(),
+        plot.title = element_text(hjust = 0.5)) + # centralize title
+  scale_fill_manual(values = c('grey20', 'red'))
+
+```
+
+##### Mean and Median
+
+```{r, results='hold'}
+#| code-fold: true
+
+# subset for affected tracts
+inc_compare_aff <- subset(texas_ej, is_affected == TRUE, select = income) %>% st_drop_geometry()
+
+# subset for unaffected tracts
+inc_compare_unaff <- subset(texas_ej, is_affected == FALSE, select = income) %>% st_drop_geometry()
+
+cat('Comparing medians of the median household income:\n', 
+    'Affected:', median(inc_compare_aff$income, na.rm = TRUE), '\n', 
+    'Unaffected:', median(inc_compare_unaff$income, na.rm = TRUE), '\n\n')
+
+cat('Comparing means of the median household income:\n', 
+    'Affected:', round(mean(inc_compare_aff$income, na.rm = TRUE)), '\n', 
+    'Unaffected:', round(mean(inc_compare_unaff$income, na.rm = TRUE)))
+```
+
+# [**Conclusion**]{.underline}
+
+It appears that the effects of the Texas February 2021 blackouts were not disproportionately felt. In fact, the median household income of the affected homes appears slightly higher than that of the unaffected homes. Some limitations of this analysis include, uncertainty caused by: a lack of spatial imagery data in between 2/7 and 2/16, possible error introduced through use of spatial analysis functions, use of raster data itself as it is nonspecific and doesn't show why the cells have the values they do, and whether or not a difference of 200 is enough to encompass all homes affected by blackouts.
+
+# [**Data Citations**]{.underline}
+
+| Data | Citation | Link |
+|-------------------|----------------------------------|-------------------|
+| NASA Worldview VNP46A1 - VIIRS/NPP Daily Gridded Day Night Band 500m Linear Lat Lon Grid Night | Román, M.O., Wang, Z., Sun, Q., Kalb, V., Miller, S.D., Molthan, A., Schultz, L., Bell, J., Stokes, E.C., Pandey, B. and Seto, K.C., et al. (2018). NASA's Black Marble nighttime lights product suite. Remote Sensing of Environment 210, 113-143. doi:10.1016/j.rse.2018.03.017. | [Link](https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/VNP46A1) |
+| OpenStreetMap from Geofabrik | OpenStreetMap contributors. (2017). Planet dump retrieved from https://planet.osm.org. | [Link](https://download.geofabrik.de/) |
+| U.S. Census Bureau American Community Survey 2019 | U.S. Census Bureau. (2019). American Community Survey 5-Year Data (2009-2022). | [Link](https://www.census.gov/data/developers/data-sets/acs-5year.2019.html#list-tab-1806015614) |
