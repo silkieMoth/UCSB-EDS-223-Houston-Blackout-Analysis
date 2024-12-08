@@ -6,6 +6,7 @@ date: last-modified
 format:
   html: 
     toc: true
+    abstract: 'The following is the full workflow for the analysis for the affects of the 2021 Texas Power Outages from the perspective of wealth inequality. Please see inline code comments for more specific information on the analysis and data manipulation.'
 editor: source
 execute: 
   eval: true
@@ -18,6 +19,16 @@ theme:
 # [**Full Workflow**]{.underline}
 
 ## 1. Read in All Data:
+
+Highlights:
+
+*   Loading in datasets.
+  +   Nighttime satellite imagery.
+  +   Roads, querying for highways.
+  +   Houses, querying for permanent dwellings.
+  +   Socioeconomic data, median income & TX polygons.
+*   Attaching satellite rasters collected on same day together, side to side. 
+
 
 ```{r, results='hide'}
 #| code-fold: true
@@ -90,6 +101,11 @@ texas_income <- st_read(here::here('data', 'ACS_2019_5YR_TRACT_48_TEXAS.gdb'), l
 
 Create vector representing all areas affected by blackout.
 
+Highlights:
+
+*   Creation of raster highlighting areas where blackout occurred.
+*   Cropping of blackout raster to Houston.
+
 ```{r, results='hold'}
 
 # get difference between after and before blackout 
@@ -138,6 +154,11 @@ if(st_crs(blackout_vector_crop) != st_crs(crs_test_obj)){
 ### 2b. Exclude highways from the cropped blackout mask:
 
 All areas 200 meters within distance from a highway are to be excluded.
+
+Highlights:
+
+*   Crop roads data to Houston.
+*   Filter out areas in blackout raster 200m near highway with buffer.
 
 ```{r, results='hold'}
 # crop roads to same extent as blackout mask
@@ -272,6 +293,8 @@ if(nrow(tracts_affected) + nrow(subset(texas_ej, is_affected == FALSE)) != nrow(
 ```
 
 ## 3. Mapmaking and Analysis
+
+The following sections contain code that make maps and figures characterizing the extent of the blackout, in terms of it's disproportionate impact along lines of income.
 
 ### 3a. Comparison of night light intensities before and after the first two storms:
 
@@ -457,6 +480,6 @@ It appears that the effects of the Texas February 2021 blackouts were not dispro
 
 | Data | Citation | Link |
 |-------------------|----------------------------------|-------------------|
-| NASA Worldview VNP46A1 - VIIRS/NPP Daily Gridded Day Night Band 500m Linear Lat Lon Grid Night | Román, M.O., Wang, Z., Sun, Q., Kalb, V., Miller, S.D., Molthan, A., Schultz, L., Bell, J., Stokes, E.C., Pandey, B. and Seto, K.C., et al. (2018). NASA's Black Marble nighttime lights product suite. Remote Sensing of Environment 210, 113-143. doi:10.1016/j.rse.2018.03.017. | [Link](https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/VNP46A1) |
-| OpenStreetMap from Geofabrik | OpenStreetMap contributors. (2017). Planet dump retrieved from https://planet.osm.org. | [Link](https://download.geofabrik.de/) |
-| U.S. Census Bureau American Community Survey 2019 | U.S. Census Bureau. (2019). American Community Survey 5-Year Data (2009-2022). | [Link](https://www.census.gov/data/developers/data-sets/acs-5year.2019.html#list-tab-1806015614) |
+| NASA Worldview VNP46A1 - VIIRS/NPP Daily Gridded Day Night Band 500m Linear Lat Lon Grid Night | Román, M.O., Wang, Z., Sun, Q., Kalb, V., Miller, S.D., Molthan, A., Schultz, L., Bell, J., Stokes, E.C., Pandey, B. and Seto, K.C., et al. (2018). NASA's Black Marble nighttime lights product suite. Remote Sensing of Environment 210, 113-143. doi:10.1016/j.rse.2018.03.017. | [Link to satellite imagery.](https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/VNP46A1) |
+| OpenStreetMap from Geofabrik | OpenStreetMap contributors. (2017). Planet dump retrieved from https://planet.osm.org. | [Link to roads and housing data.](https://download.geofabrik.de/) |
+| U.S. Census Bureau American Community Survey 2019 | U.S. Census Bureau. (2019). American Community Survey 5-Year Data (2009-2022). | [Link to district polygons with socioeconomic data.](https://www.census.gov/data/developers/data-sets/acs-5year.2019.html#list-tab-1806015614) |
