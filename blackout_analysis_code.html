@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Joshua Paul Cohen">
-<meta name="dcterms.date" content="2024-12-02">
+<meta name="dcterms.date" content="2024-12-07">
 
 <title>2021 Houston Blackout Analysis</title>
 <style>
@@ -126,13 +126,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">December 2, 2024</p>
+      <p class="date">December 7, 2024</p>
     </div>
   </div>
   
     
   </div>
   
+<div>
+  <div class="abstract">
+    <div class="block-title">Abstract</div>
+    The following is the full workflow for the analysis for the affects of the 2021 Texas Power Outages from the perspective of wealth inequality. Please see inline code comments for more specific information on the analysis and data manipulation.
+  </div>
+</div>
 
 
 </header>
@@ -142,6 +148,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1><u><strong>Full Workflow</strong></u></h1>
 <section id="read-in-all-data" class="level2">
 <h2 class="anchored" data-anchor-id="read-in-all-data">1. Read in All Data:</h2>
+<p>Highlights:</p>
+<ul>
+<li>Loading in datasets.</li>
+<li>Nighttime satellite imagery.</li>
+<li>Roads, querying for highways.</li>
+<li>Houses, querying for permanent dwellings.</li>
+<li>Socioeconomic data, median income &amp; TX polygons.</li>
+<li>Attaching satellite rasters collected on same day together, side to side.</li>
+</ul>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -212,6 +227,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="a.-create-a-blackout-mask" class="level3">
 <h3 class="anchored" data-anchor-id="a.-create-a-blackout-mask">2a. Create a blackout mask:</h3>
 <p>Create vector representing all areas affected by blackout.</p>
+<p>Highlights:</p>
+<ul>
+<li>Creation of raster highlighting areas where blackout occurred.</li>
+<li>Cropping of blackout raster to Houston.</li>
+</ul>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get difference between after and before blackout </span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>diff <span class="ot">&lt;-</span> power_out_feb16 <span class="sc">-</span> power_out_feb07</span>
@@ -263,6 +283,11 @@ CRS of cropped blackout mask changed to EPSG:3083</code></pre>
 <section id="b.-exclude-highways-from-the-cropped-blackout-mask" class="level3">
 <h3 class="anchored" data-anchor-id="b.-exclude-highways-from-the-cropped-blackout-mask">2b. Exclude highways from the cropped blackout mask:</h3>
 <p>All areas 200 meters within distance from a highway are to be excluded.</p>
+<p>Highlights:</p>
+<ul>
+<li>Crop roads data to Houston.</li>
+<li>Filter out areas in blackout raster 200m near highway with buffer.</li>
+</ul>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># crop roads to same extent as blackout mask</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>roads_crop <span class="ot">&lt;-</span> <span class="fu">st_crop</span>(roads, bbox)</span>
@@ -408,6 +433,7 @@ Tracts filtered and is_affected column in Texas boundary and income layer create
 </section>
 <section id="mapmaking-and-analysis" class="level2">
 <h2 class="anchored" data-anchor-id="mapmaking-and-analysis">3. Mapmaking and Analysis</h2>
+<p>The following sections contain code that make maps and figures characterizing the extent of the blackout, in terms of it’s disproportionate impact along lines of income.</p>
 <section id="a.-comparison-of-night-light-intensities-before-and-after-the-first-two-storms" class="level3">
 <h3 class="anchored" data-anchor-id="a.-comparison-of-night-light-intensities-before-and-after-the-first-two-storms">3a. Comparison of night light intensities before and after the first two storms:</h3>
 <div class="cell">
@@ -655,17 +681,17 @@ Comparing means of the median household income:
 <tr class="odd">
 <td>NASA Worldview VNP46A1 - VIIRS/NPP Daily Gridded Day Night Band 500m Linear Lat Lon Grid Night</td>
 <td>Román, M.O., Wang, Z., Sun, Q., Kalb, V., Miller, S.D., Molthan, A., Schultz, L., Bell, J., Stokes, E.C., Pandey, B. and Seto, K.C., et al.&nbsp;(2018). NASA’s Black Marble nighttime lights product suite. Remote Sensing of Environment 210, 113-143. doi:10.1016/j.rse.2018.03.017.</td>
-<td><a href="https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/VNP46A1">Link</a></td>
+<td><a href="https://ladsweb.modaps.eosdis.nasa.gov/missions-and-measurements/products/VNP46A1">Link to satellite imagery.</a></td>
 </tr>
 <tr class="even">
 <td>OpenStreetMap from Geofabrik</td>
 <td>OpenStreetMap contributors. (2017). Planet dump retrieved from https://planet.osm.org.</td>
-<td><a href="https://download.geofabrik.de/">Link</a></td>
+<td><a href="https://download.geofabrik.de/">Link to roads and housing data.</a></td>
 </tr>
 <tr class="odd">
 <td>U.S. Census Bureau American Community Survey 2019</td>
 <td>U.S. Census Bureau. (2019). American Community Survey 5-Year Data (2009-2022).</td>
-<td><a href="https://www.census.gov/data/developers/data-sets/acs-5year.2019.html#list-tab-1806015614">Link</a></td>
+<td><a href="https://www.census.gov/data/developers/data-sets/acs-5year.2019.html#list-tab-1806015614">Link to district polygons with socioeconomic data.</a></td>
 </tr>
 </tbody>
 </table>
