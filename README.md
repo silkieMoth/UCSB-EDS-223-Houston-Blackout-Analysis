@@ -1,7 +1,7 @@
 # Houston Blackout Analysis
 
 ## Overview
-This project contains a geospatial analysis of the 2021 TX power crisis from an environmental justice perspective.
+This project contains a geospatial analysis of the 2021 TX power crisis from an environmental justice perspective. Nighttime satellite imagery are cross-referenced with roads, house, district boundary, and median income data to ascertain the extent of the impact, but also how that impact disproportionately affected individuals and families along lines of income.
 
 ![](united-states-nightlight.jpg "Nightime in the United States.")
 
