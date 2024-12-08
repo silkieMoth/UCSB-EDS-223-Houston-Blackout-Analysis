@@ -6,3 +6,6 @@
 
 # Data folder
 data/
+
+# HTML render
+README.html
