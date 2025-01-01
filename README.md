@@ -23,8 +23,8 @@ UCSB-EDS-220-Fisheries-Habitat-Suitability
 ├── blackout_analysis_code.qmd
 |
 ├── blackout_analysis_code.html
-├── blackout_analysis_code_files/
-├── custom.css  # html style information
+|   └──blackout_analysis_code_files/
+|   └──custom.css  # html style information
 |
 ├── UCSB-EDS-223-Houston-Blackout-Analysis.Rproj
 │
